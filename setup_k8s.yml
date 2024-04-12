@@ -34,7 +34,7 @@
     - name: Reboot the system
       ansible.builtin.reboot:
         reboot_timeout: 300
-        reboot_msg: "Reboot initiated by Ansible for kernel update"
+        post_reboot_delay: 30
 
     - name: Enable and start kubelet service
       service:
@@ -42,11 +42,17 @@
         enabled: yes
         state: started
       loop:
-        - cri-o
+        - crio
         - kubelet
+    # Needed bc of FCOS and read only filesystem
+    # https://kubernetes.io/docs/setup/production-environment/tools/kubeadm/troubleshooting-kubeadm/#usr-mounted-read-only
+    - name: Copy kubeadm-config.yaml to the controller node
+      copy:
+        src: templates/kubeadm-config.yaml
+        dest: /tmp/kubeadm-config.yaml
 
     - name: Initialize Kubernetes master
-      command: kubeadm init --pod-network-cidr=10.244.0.0/16 --cri-socket=/var/run/crio/crio.sock
+      command: kubeadm init --config /tmp/kubeadm-config.yaml
       register: kubeadm_output
       ignore_errors: yes
 
@@ -75,7 +81,8 @@
     - name: Reboot the system
       ansible.builtin.reboot:
         reboot_timeout: 300
-        reboot_msg: "Reboot initiated by Ansible for kernel update"
+        post_reboot_delay: 30
+
 
     - name: Enable and start kubelet service
       service:
@@ -83,16 +90,16 @@
         enabled: yes
         state: started
       loop:
-        - cri-o
+        - crio
         - kubelet
 
     - name: Show join command
       debug:
-        var: hostvars['master']['join_command']
+        var: hostvars['controller']['join_command']
 
 
     - name: Join worker nodes to the cluster
-      command: "{{ hostvars['master']['join_command'] }}"
+      command: "{{ hostvars['controller']['join_command'] }}"
       
 
 - hosts: all

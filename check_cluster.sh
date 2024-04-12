@@ -1,4 +1,10 @@
 #!/bin/bash
+# This script will check if the cluster is working
+if [ "$EUID" -ne 0 ]
+  then echo "Please run as root"
+  exit
+fi
+KUBECONFIG=/etc/kubernetes/admin.conf
 kubectl create deployment test --image nginx --replicas 3
 
 cat testsvc.yaml << EOF

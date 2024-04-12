@@ -16,7 +16,7 @@ server_password=${SERVER_PASSWORD}
 echo "Creating Master and Worker inventory file"
 echo "[master]" > inventory
 master=$(echo $tf_output | jq -r '.ips.value[0][0]' | tr '\n' ' ')
-echo master ansible_host=${master} ansible_ssh_user=${server_user} >> inventory
+echo controller ansible_host=${master} ansible_ssh_user=${server_user} >> inventory
 
 # Parse the json output for first element of the tuple
 count=0

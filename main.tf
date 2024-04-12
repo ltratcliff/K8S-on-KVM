@@ -56,7 +56,7 @@ resource "libvirt_domain" "domain" {
   }
   vcpu       = 2
   memory     = 2048
-  qemu_agent = true
+  qemu_agent = false
   coreos_ignition = libvirt_ignition.ignition.id
   xml {
     xslt = file("libvirt-domain.xsl")
@@ -99,15 +99,16 @@ resource "libvirt_ignition" "ignition" {
 }
 
 
-output "ips" {
-  value = libvirt_domain.domain.*.network_interface.0.addresses
+
+resource "time_sleep" "wait_for_ip" {
+  depends_on = [libvirt_domain.domain]
+  create_duration = "30s"
 }
 
-
-# resource "time_sleep" "wait_for_ip" {
-#   depends_on = [libvirt_domain.domain]
-#   create_duration = "10s"
-# }
+output "ips" {
+  value = libvirt_domain.domain.*.network_interface.0.addresses
+  depends_on = [ time_sleep.wait_for_ip ]
+}
 
 
 # resource local_file "inventory" {
