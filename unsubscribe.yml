@@ -1,0 +1,6 @@
+- hosts: all
+  become: yes
+  tasks:
+  - name: Register as and auto-subscribe to available content.
+    community.general.redhat_subscription:
+      state: absent
