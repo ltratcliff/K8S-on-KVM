@@ -7,7 +7,7 @@ fi
 KUBECONFIG=/etc/kubernetes/admin.conf
 kubectl create deployment test --image nginx --replicas 3
 
-cat testsvc.yaml << EOF
+cat > testsvc.yaml << EOF
 apiVersion: v1
 kind: Service
 metadata:
