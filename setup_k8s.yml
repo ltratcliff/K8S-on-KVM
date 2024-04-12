@@ -73,7 +73,7 @@
       ignore_errors: yes
 
     - name: Install kube-router
-      command: kubectl apply -f https://raw.githubusercontent.com/cloudnativelabs/kube-router/master/daemonset/kubeadm-kuberouter.yaml
+      command: kubectl apply -f https://docs.projectcalico.org/manifests/calico.yaml
 
 - hosts: workers
   become: yes
@@ -101,11 +101,3 @@
     - name: Join worker nodes to the cluster
       command: "{{ hostvars['controller']['join_command'] }}"
       
-
-- hosts: all
-  become: yes
-  tasks:
-  - name: Remove subscription.
-    community.general.redhat_subscription:
-      state: absent
-
