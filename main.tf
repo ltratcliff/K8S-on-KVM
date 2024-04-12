@@ -19,7 +19,7 @@ variable "prefix" {
 
 variable "os_image" {
   type    = string
-  default = "rhel-8.9-x86_64-kvm.qcow2"
+  default = "fedora-coreos-39.20240322.3.1-qemu.x86_64.qcow2"
 }
 
 resource "libvirt_network" "network" {
@@ -57,7 +57,7 @@ resource "libvirt_domain" "domain" {
   vcpu       = 2
   memory     = 2048
   qemu_agent = true
-  cloudinit  = libvirt_cloudinit_disk.commoninit.id
+  coreos_ignition = libvirt_ignition.ignition.id
   xml {
     xslt = file("libvirt-domain.xsl")
   }
@@ -93,10 +93,9 @@ resource "libvirt_domain" "domain" {
 }
 
 
-resource "libvirt_cloudinit_disk" "commoninit" {
-  name      = "commoninit.iso"
-  pool      = "default"
-  user_data = file("${path.module}/cloud_init.cfg")
+resource "libvirt_ignition" "ignition" {
+  name = "fcos.ign"
+  content = file("${path.module}/fcos.ign")
 }
 
 

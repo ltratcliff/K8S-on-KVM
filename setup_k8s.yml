@@ -6,99 +6,44 @@
     ansible.builtin.hostname:
       name: "{{ inventory_hostname }}"
 
-  - name: Register as and auto-subscribe to available content.
-    community.general.redhat_subscription:
+  - name: Install overlay package
+    community.general.rpm_ostree_pkg:
+      name: "{{ item }}"
       state: present
-      username: {{ subscription_username }}
-      password: {{ subscription_password }}
-      auto_attach: true
+    loop:
+      - kubelet
+      - kubeadm
+      - cri-o
+
   
-  - name: Put SELinux in permissive mode, logging actions that would be blocked.
-    ansible.posix.selinux:
-      policy: targeted
-      state: permissive
-
-  - name: Add k8s repository
-    ansible.builtin.yum_repository:
-      name: k8s
-      description: k8s repo
-      baseurl: https://pkgs.k8s.io/core:/stable:/v1.29/rpm/
-      enabled: 1
-      gpgcheck: 1
-      gpgkey: https://pkgs.k8s.io/core:/stable:/v1.29/rpm/repodata/repomd.xml.key
-      # exclude: kubelet kubeadm kubectl cri-tools kubernetes-cni
-
-
-  - name: Add CRI-O repository
-    ansible.builtin.yum_repository:
-      name: cri-o
-      description: cri-o repo
-      baseurl: https://pkgs.k8s.io/addons:/cri-o:/prerelease:/main/rpm/
-      enabled: 1
-      gpgcheck: 1
-      gpgkey: https://pkgs.k8s.io/addons:/cri-o:/prerelease:/main/rpm/repodata/repomd.xml.key
-
-
-  - name: Modprobe overlay and br_netfilter
-    ansible.builtin.modprobe:
-      name: "{{ item }}"
-    loop:
-      - overlay
-      - br_netfilter
-
-  - name: Setup sysctl.conf
-    ansible.builtin.copy:
-      src: templates/sysctl.conf
-      dest: /etc/sysctl.d/99-k8s.conf
-      owner: root
-      group: root
-      mode: 0644
-
-  - name: Load sysctl settings
-    ansible.builtin.command: sysctl --system
-
-  - name: Install cri-o dependencies
-    ansible.builtin.dnf:
-      name: "{{ item }}"
-      state: present
-    loop:
-      - conmon
-      - skopeo
-      - runc
-      - podman
-      - socat
-      - ebtables
-      - ethtool
-      - iptables
-      - conntrack
-      - container-selinux 
+  # - name: Put SELinux in permissive mode, logging actions that would be blocked.
+  #   ansible.posix.selinux:
+  #     policy: targeted
+  #     state: permissive
 
 
 
 - hosts: master
   become: yes
   tasks:
-    - name: Install kubeadm, kubelet, and kubectl
-      dnf:
-        name: "{{ item }}"
+    - name: Install overlay package
+      community.general.rpm_ostree_pkg:
+        name: kubectl
         state: present
-      loop:
-        - cri-o
-        - kubeadm
-        - kubelet
-        - kubectl
+
+    - name: Reboot the system
+      ansible.builtin.reboot:
+        reboot_timeout: 300
+        reboot_msg: "Reboot initiated by Ansible for kernel update"
 
     - name: Enable and start kubelet service
       service:
-        name: kubelet
+        name: "{{ item }}"
         enabled: yes
         state: started
-    
-    - name: Enable and start crio service
-      service:
-        name: crio
-        enabled: yes
-        state: started
+      loop:
+        - cri-o
+        - kubelet
 
     - name: Initialize Kubernetes master
       command: kubeadm init --pod-network-cidr=10.244.0.0/16 --cri-socket=/var/run/crio/crio.sock
@@ -121,34 +66,25 @@
         #- "chown $(id -u):$(id -g) $HOME/.kube/config"
       ignore_errors: yes
 
-    - name: Install Calico network plugin
-      command: kubectl apply -f https://docs.projectcalico.org/manifests/calico.yaml
-      #when: "'calico' in kubeadm_output.stdout"
+    - name: Install kube-router
+      command: kubectl apply -f https://raw.githubusercontent.com/cloudnativelabs/kube-router/master/daemonset/kubeadm-kuberouter.yaml
 
 - hosts: workers
   become: yes
   tasks:
-    - name: Install kubeadm, kubelet, and kubectl
-      dnf:
-        name: "{{ item }}"
-        state: present
-      loop:
-        - cri-o
-        - kubeadm
-        - kubelet
-        - kubectl
+    - name: Reboot the system
+      ansible.builtin.reboot:
+        reboot_timeout: 300
+        reboot_msg: "Reboot initiated by Ansible for kernel update"
 
     - name: Enable and start kubelet service
       service:
-        name: kubelet
+        name: "{{ item }}"
         enabled: yes
         state: started
-
-    - name: Enable and start crio service
-      service:
-        name: crio
-        enabled: yes
-        state: started 
+      loop:
+        - cri-o
+        - kubelet
 
     - name: Show join command
       debug:
