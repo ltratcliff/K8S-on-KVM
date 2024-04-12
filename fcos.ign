@@ -28,7 +28,7 @@
         "path": "/etc/yum.repos.d/kubernetes.repo",
         "contents": {
           "compression": "gzip",
-          "source": "data:;base64,H4sIAAAAAAAC/4yNUQrDIBiD3z1FL6BSGN0YeIIdYYxibfgLav3RCvP2ozC6PfYpJORLnr5OyCs2lJdYbYR5HIGYbEHNwSzbxuWuNVvnLaEoF1KdFaVEAcqlqFuNOoNT0b89iXCV79swDheB1U4Bs+kFMbkFzpte7MD454nJo518m5PbVXo0RUyi685zmaP8tg7+EwAA//+EhlgnCQEAAA=="
+          "source": "data:;base64,H4sIAAAAAAAC/5TMOwoCMRRG4T6LyWWsNJAVuASxyOMnIzcvcjPi7F5UsJ/u8BXnxpvHqJiQu6quwF7/oLwTbCPbdc4uhqhzEs1n0Y9GoQ0Ykul8hqHnok8XGr2QQv1QtItKPYUVgX/J2A+NBnqLbrpvlKhfJWvGrt4BAAD//7VxCmqyAAAA"
         },
         "mode": 420
       },
@@ -49,6 +49,15 @@
           "source": "data:,net.bridge.bridge-nf-call-iptables%3D1%0Anet.ipv4.ip_forward%3D1%0A"
         },
         "mode": 420
+      }
+    ]
+  },
+  "systemd": {
+    "units": [
+      {
+        "contents": "[Unit]\nRequires=network-online.target\nAfter=network-online.target\nBefore=sshd.service\n[Service]\nType=oneshot\nExecCondition=/usr/bin/test ! -f /etc/python3-for-ansible.done\nExecStart=/usr/bin/sed -i '/\\\\[updates\\\\]/,/^\\\\[/ s/^enabled=.*$/enabled=0/' /etc/yum.repos.d/fedora-updates.repo\nExecStart=/usr/bin/rpm-ostree install python3 libselinux-python3\nExecStart=/usr/bin/sed -i '/\\\\[updates\\\\]/,/^\\\\[/ s/^enabled=.*$/enabled=1/' /etc/yum.repos.d/fedora-updates.repo\nExecStart=/usr/bin/sed -i '/^\\\\[updates\\\\]/a exclude=libxcrypt-compat* mpdecimal* python-pip-wheel* python-setuptools-wheel* python-unversioned-command* python3* python3-libs* python3-selinux*' /etc/yum.repos.d/fedora-updates.repo\nExecStartPost=/usr/bin/touch /etc/python3-for-ansible.done\nExecStartPost=/usr/sbin/shutdown -r now\n[Install]\nWantedBy=multi-user.target",
+        "enabled": true,
+        "name": "python3-for-ansible.service"
       }
     ]
   }
